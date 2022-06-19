@@ -1,24 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
+import "./App.css";
+import CodeEditor from "./components/TextEditor";
+import ERModel from "./components/ERModel";
+import { AppStorage } from "./storage/storage";
 
 function App() {
+  let [DBMLCode, setDBMLCode] = useState<string>("");
+
+  React.useEffect(() => {
+    AppStorage.observable.subscribe((event) => {
+      if (event.key !== "DBMLCode") return;
+
+      setDBMLCode(event.newValue as string);
+    });
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="App" style={{ height: "100%", display: "flex" }}>
+      <CodeEditor></CodeEditor>
+      <ERModel DBML={DBMLCode}></ERModel>
     </div>
   );
 }
