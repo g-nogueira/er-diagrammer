@@ -7,5 +7,5 @@ export class Ref extends ERElement{
     endpoints: Endpoint[] = [];
     onDelete: any;
     onUpdate: any;
-    schema: Schema = new Schema;
+    schema: Schema = new Schema();
 }

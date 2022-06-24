@@ -3,10 +3,13 @@
  * and the Processor is responsible for creating the Tables and Relationships
  */
 
+import { table } from "console";
 import { fabric } from "fabric";
 import { Canvas, IObjectOptions, Object, Rect } from "fabric/fabric-impl";
 import { IRenderer } from "../models/IRenderer";
 import { Schema } from "./../models/Schema";
+import { Header, IRelationEndpoint, Row, Table } from "./FabricGenerator";
+import { Relation } from './FabricGenerator';
 
 export class FabricRenderer implements IRenderer {
   canvas: Canvas | undefined;
@@ -15,7 +18,7 @@ export class FabricRenderer implements IRenderer {
   options = {
     canvas: {
       width: 1000,
-      height: 1000
+      height: 1000,
     },
     table: {
       width: 200,
@@ -28,7 +31,7 @@ export class FabricRenderer implements IRenderer {
       stroke: "black",
       strokeWidth: 2,
       fontSize: 20,
-      fillStyle: "#000"
+      fillStyle: "#000",
     },
     header: {
       height: 35,
@@ -36,8 +39,8 @@ export class FabricRenderer implements IRenderer {
       stroke: "black",
       strokeWidth: 2,
       fontSize: 20,
-      fillStyle: "white"
-    }
+      fillStyle: "white",
+    },
   };
 
   constructor(containerId: string, options?: any) {
@@ -56,151 +59,90 @@ export class FabricRenderer implements IRenderer {
 
   render(schema: Schema): void {
     var previousTotalWidth = 0;
+    
+    // CREATE TABLE LIST
     var tables = schema.tables.map((t, i) => {
-      let totalTableHeight = t.fields.length * this.options.row.height + this.options.header.height;
-      let titleWidth = t.name.length * this.options.row.fontSize;
-      let tableWidth = titleWidth > this.options.table.width ? titleWidth :  this.options.table.width;
-
+      
       // Table
-      let table = new this.tableFrame({
-        originX: "center",
-        originY: "top",
-        height: totalTableHeight,
-        width: tableWidth
-      });
+      let table : Table = new Table({name: t.name});
 
       // Table Title
-      let header : Rect = new this.header({
-        label: t.name,
-        originX: "center",
-        originY: "top",
-        top: 0,
-        width: tableWidth
-      });
+      table.addHeader({ label: t.name, table });
 
       // Fields
-      let fields : Rect[] = t.fields.map((f, i) => {
-        let rowTop = (this.options.row.height * i);
+      table.addRows(t.fields.map((field, i) => ({label: field.name,table})));
 
-        return new this.row({
-          label: f.name,
-          originX: "center",
-          originY: "top",
-          top: rowTop,
-          width: tableWidth
-        });
+      return table;
+    });
+    
+    let maxTop = 1000;
+    let minTop = 50;
+    let maxLeft = 1000;
+    let minLeft = 0;
+
+    // SET TABLE POSITIONS
+    var fabricTables = tables.map((t, i) => {
+      let fabricTable = t.getGroup({
+        top: 100 + Math.random() * (maxTop - minTop) + minTop,
+        // left: previousTotalWidth + 10,
+        left:  Math.random() * (maxLeft - minLeft) + minLeft,
       });
 
-      let fieldGroup = new fabric.Group(fields, {
-        top: this.options.header.height,
+      previousTotalWidth += (t.width || 0);
+
+      return fabricTable;
+    });
+
+    // CREATE TABLE RELATIONS
+    var fabricRelations = schema.refs.map((ref, i) => {
+
+      let endpoints = ref.endpoints.map((ep, i) => {
+        
+        // Find the endpoint table by the name
+        let table = tables.find(t => t.name === ep.tableName);
+
+        if (!table) throw new Error(`Table ${ep.tableName} not found...`);
+
+        // Find the endpoint row by the label
+        let rows = table.rows.filter(r => ep.fieldNames.includes(r.label));
+
+        if (!rows.length) throw new Error(`Rows with names ${ep.fieldNames.join(", ")} not found...`);
+
+        // Create Relation
+        let fabricEndpoint: IRelationEndpoint = {
+          table : table as Table,
+          relation: ep.relation,
+          rows
+        };
+
+        return fabricEndpoint;
       });
 
-      let tableBodyGroup = new fabric.Group([header, fieldGroup]);
+      return new Relation({endpoints});
 
-      let componentGroup = new fabric.Group([tableBodyGroup, table], {
-        top: 100,
-        left: previousTotalWidth + 10,
-      });
-      
-      previousTotalWidth += tableWidth;
-
-      return componentGroup;
     });
 
     if (!this.canvas) this.init();
 
     this.canvas?.clear();
 
-    tables.forEach((t) => {
+    // ADD TO CANVAS
+    // Add tables
+    fabricTables.forEach((t) => {
       this.canvas?.add(t);
     });
 
-    this.objectsRendered.push(...tables);
+    // Add relations
+    fabricRelations.forEach((r) => {
+      this.canvas?.add(r);
+    });
+
+    this.objectsRendered.push(...fabricTables, ...fabricRelations);
+
+    Relation.events.forEach(([name, target]) => this.canvas?.on(name, target));
   }
 
   _clear(): void {
     this.canvas?.remove(...this.canvas.getObjects().concat());
-  }
-
-  get tableFrame(): typeof Rect {
-    return fabric.util.createClass(fabric.Rect, {
-      width: this.options.table.width,
-      fill: "rgba(0,0,0,0)",
-      stroke: "black",
-      strokeWidth: 2,
-
-      initialize(options: IObjectOptions) {
-        this.callSuper("initialize", options);
-      },
-    });
-  }
-
-  get row(): any {
-    let rowOptions = this.options.row;
-
-    return fabric.util.createClass(fabric.Rect, {
-      type: "tableRow",
-      width: this.options.table.width,
-      height: rowOptions.height,
-      fill: rowOptions.fill,
-      stroke: rowOptions.stroke,
-      strokeWidth: rowOptions.strokeWidth,
-
-      // initialize can be of type function(options) or function(property, options), like for text.
-      // no other signatures allowed.
-      initialize(options: IObjectOptions & { label: string }) {
-        this.callSuper("initialize", options);
-        this.set("label", options.label || "");
-      },
-
-      toObject: function () {
-        return fabric.util.object.extend(this.callSuper("toObject"), {
-          label: this.get("label"),
-        });
-      },
-
-      _render: function (ctx: CanvasRenderingContext2D) {
-        this.callSuper("_render", ctx);
-
-        ctx.font = `${rowOptions.fontSize}px Helvetica`;
-        ctx.fillStyle = rowOptions.fillStyle;
-        ctx.fillText(this.label, -this.width / 2 + rowOptions.paddingX, +this.height / 2 - rowOptions.fontSize / 2);
-      },
-    });
-  }
-
-  get header(): any {
-    let headerOptions = this.options.header;
-
-    return fabric.util.createClass(fabric.Rect, {
-      type: "tableHeader",
-      width: this.options.table.width,
-      height: this.options.header.height,
-      fill: this.options.header.fill,
-      stroke: this.options.header.stroke,
-      strokeWidth: this.options.header.strokeWidth,
-
-      // initialize can be of type function(options) or function(property, options), like for text.
-      // no other signatures allowed.
-      initialize(options: IObjectOptions & { label: string }) {
-        this.callSuper("initialize", options);
-        this.set("label", options.label || "");
-      },
-
-      toObject: function () {
-        return fabric.util.object.extend(this.callSuper("toObject"), {
-          label: this.get("label"),
-        });
-      },
-
-      _render: function (ctx: CanvasRenderingContext2D) {
-        this.callSuper("_render", ctx);
-
-        ctx.font = `${headerOptions.fontSize}px Helvetica`;
-        ctx.fillStyle = headerOptions.fillStyle;
-        ctx.textAlign = "center";
-        ctx.fillText(this.label, 0, this.height / 2 - headerOptions.fontSize / 2);
-      },
-    });
   }
 }
