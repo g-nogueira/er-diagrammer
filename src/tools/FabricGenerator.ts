@@ -1,8 +1,8 @@
 import { fabric } from "fabric";
-import { IGroupOptions, IRectOptions, ITextOptions } from "fabric/fabric-impl";
+import { IGroupOptions, IRectOptions, ITextOptions, Point } from "fabric/fabric-impl";
 
 export interface ITableOptions extends fabric.IRectOptions {
-  name: string;
+  tableName: string;
 }
 export interface IRowOptions extends fabric.IRectOptions {
   label?: string;
@@ -19,7 +19,7 @@ export interface IRelationEndpoint {
   table: Table;
   rows: Row[];
   relation: string;
-  line?: fabric.Line;
+  line?: fabric.Path;
 }
 export interface IRelationOptions extends IGroupOptions {
   label?: string;
@@ -27,12 +27,13 @@ export interface IRelationOptions extends IGroupOptions {
 }
 
 export class Table extends fabric.Rect {
+  type = "Table";
   rows: Row[] = [];
   header?: Header;
-  name: string;
-  parent?: fabric.Group;
+  tableName: string;
+  parent = new fabric.Group([], {type: "TableGroup"});
 
-  endpoints: Set<IRelationEndpoint> = new Set();
+  relations: Relation[] = [];
 
   /**
    * Constructor
@@ -40,8 +41,7 @@ export class Table extends fabric.Rect {
    */
   constructor(options: ITableOptions) {
     super(options);
-
-    this.name = options.name;
+    this.tableName = options.tableName;
     this.width = options.width;
     this.fill = "rgba(0,0,0,0)";
     this.stroke = "black";
@@ -49,6 +49,8 @@ export class Table extends fabric.Rect {
 
     this.originY = "top";
     this.originX = "center";
+
+    this.group = new fabric.Group()
   }
 
   addHeader(options: IHeaderOptions) {
@@ -108,7 +110,10 @@ export class Table extends fabric.Rect {
     let table = this;
     let header = this.header;
     let rowGroup = new fabric.Group(this.rows);
-    let componentGroup = new fabric.Group([], options);
+    let componentGroup = this.parent;
+
+    this.parent.set("top", options?.top);
+    this.parent.set("left", options?.left);
 
     // ADDING THE COMPONENTS
     componentGroup.addWithUpdate(table);
@@ -148,9 +153,18 @@ export class Table extends fabric.Rect {
 
     return componentGroup;
   }
+
+  _render(ctx: CanvasRenderingContext2D): void {
+    super._render(ctx);
+
+    // this.relations.forEach(r => {
+    //   this.canvas?.add(r);
+    // })
+  }
 }
 
 export class Row extends fabric.Group {
+  type = "TableRow";
   rowRect?: fabric.Rect;
   text?: fabric.Text;
   table?: Table;
@@ -274,6 +288,7 @@ export class Row extends fabric.Group {
 }
 
 export class Header extends Row {
+  type = "TableHeader";
   _headerOptions: IHeaderOptions = {
     textColor: "white",
     fill: "#316896",
@@ -306,53 +321,114 @@ export class Header extends Row {
   }
 }
 
-export class Relation extends fabric.Group {
+export class Relation extends fabric.Path {
+  type = "TableRelation";
   label?: string;
+  id = "";
   endpoints: IRelationEndpoint[];
 
-  line: fabric.Line;
-
   constructor(options: IRelationOptions) {
-    super([], {
-      selectable: false,
-      evented: false,
-    });
+    super("M100,100 C200,100 100,200 200,200", { fill: "", stroke: "black", objectCaching: false, selectable: true, evented: false });
 
     this.label = options.label;
     this.endpoints = options.endpoints;
-    this.line = new fabric.Line([this.endpoints[0].table.parent?.left || 0, this.endpoints[0].table.parent?.top || 0, this.endpoints[1].table.parent?.left || 0, this.endpoints[1].table.parent?.top || 0], {
-      fill: "red",
-      stroke: "red",
-      strokeWidth: 5,
-      selectable: false,
-      evented: false,
-    });
 
-    this.endpoints.forEach((e) => {
-      e.line = this.line;
-    });
+    let coordinates = this.getPointCoordinates();
+    this.id = `${this.endpoints[0].table.tableName}_${this.endpoints[0].rows[0].text}_${this.endpoints[1].table.tableName}_${this.endpoints[1].rows[0].text}`;
 
-    this.endpoints.forEach((e) => e.table.endpoints?.add(e));
-
-    this.addWithUpdate(this.line);
+    if (!this.path) return;
+    
+    // @ts-ignore: Unreachable code error
+    this.path[0] = [this.path[0][0], ...coordinates[0]];
+    // @ts-ignore: Unreachable code error
+    this.path[1] = [this.path[1][0], ...coordinates[1]];
+    
+    // this.endpoints.forEach((e) => e.table.relations?.add(e));
   }
 
-  static get events(): [string, (e: fabric.IEvent) => void][] {
+  getPointCoordinates() : number[][] {
+    var table1 = this.endpoints[0].table.parent;
+    var table2 = this.endpoints[1].table.parent;
+
+    var lineStart = new fabric.Point(0,0);
+    var lineStartControl = new fabric.Point(0,0);
+    var lineEndControl = new fabric.Point(0,0);
+    var lineEnd = new fabric.Point(0,0);
+
+    // ˥ ˦ ˧ ˨ ˩ ˪ ˫ ˹ ˺ ˻ ˼ ˾ ̄ ̅
+    // ┌ ┐ └ ┘├ ┤┬ ┴ ┼ 
+
+    // Table1┐
+    //       └Table2
+    // Table1───┐
+    //          └───Table2
+    if ((table1.oCoords?.mr.x || 0) < (table2.oCoords?.ml.x || 0)) {
+      lineStart = table1.oCoords?.mr || lineStart;
+      lineStartControl = new fabric.Point(table2.oCoords?.ml.x || 0, table1.oCoords?.mr?.y || 0) || lineStartControl;
+      lineEndControl = new fabric.Point(table1.oCoords?.mr.x || 0, table2.oCoords?.ml?.y || 0) || lineEndControl;
+      lineEnd = table2.oCoords?.ml || lineEnd;
+    }
+
+    // Table1┐
+    // Table2┘
+    // AND
+    // Table1─────┐
+    //      Table2┘
+    // AND
+    //       Table1┐
+    // Table2──────┘
+    if ((table1.oCoords?.mr.x || 0) >= (table2.oCoords?.ml.x || 0)
+    && (table1.oCoords?.ml.x || 0) <= (table2.oCoords?.mr.x || 0)) {
+      lineStart = table1.oCoords?.mr || lineStart;
+      lineStartControl = new fabric.Point(lineStart.x + 100, lineStart.y) || lineStartControl;
+      lineEnd = table2.oCoords?.mr || lineEnd;
+      lineEndControl = new fabric.Point(lineEnd.x + 100, lineEnd.y) || lineStartControl;
+    }
+
+    //       ┌Table1
+    // Table2┘
+    //          ┌───Table1
+    // Table2───┘
+    if ((table1.oCoords?.ml.x || 0) > (table2.oCoords?.mr.x || 0)) {
+      lineStart = table1.oCoords?.ml || lineStart;
+      lineStartControl = new fabric.Point(table2.oCoords?.mr.x || 0, table1.oCoords?.ml?.y || 0) || lineStartControl;
+      lineEndControl = new fabric.Point(table1.oCoords?.ml.x || 0, table2.oCoords?.mr?.y || 0) || lineEndControl;
+      lineEnd = table2.oCoords?.mr || lineEnd;
+    }
+
+    return [[lineStart.x,lineStart.y], [lineStartControl.x, lineStartControl.y, lineEndControl.x, lineEndControl.y, lineEnd.x, lineEnd.y]];
+  }
+
+  get events(): [string, (e: fabric.IEvent) => void][] {
     return [
       [
         "object:moving",
         (e) => {
-          if ((e.target as any)?.getObjects && (e.target as any)?.getObjects().some((o: any) => o instanceof Table)) {
-            let table: Table = (e.target as any)?.getObjects().find((o: any) => o instanceof Table);
-            let endpoints = table.endpoints;
+          if (e.target?.type === "TableGroup") {
+            let group = e.target as fabric.Group;
+            let table = group.getObjects().find((o: fabric.Object) => o.type === "Table") as Table;
+            let relations = table.relations;
 
-            endpoints.forEach((e) => {
-              e.line?.set({ x2: table.parent?.left, y2: table.parent?.top });
+            relations.forEach((relation) => {
+              let coordinates = this.getPointCoordinates();
+
+              // relation.dirty = true;
+
+              // @ts-ignore: Unreachable code error
+              relation.path[0] = [relation.path[0][0], ...coordinates[0]];
+              // @ts-ignore: Unreachable code error
+              relation.path[1] = [relation.path[1][0], ...coordinates[1]];
             });
+
+            // e.target.canvas?.requestRenderAll();
           }
         },
       ],
     ];
+  }
+
+  toString() {
+    return super.toString() + ' (type: ' + this.type + ')';
   }
 }
 

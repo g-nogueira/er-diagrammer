@@ -9,7 +9,8 @@ import { Canvas, IObjectOptions, Object, Rect } from "fabric/fabric-impl";
 import { IRenderer } from "../models/IRenderer";
 import { Schema } from "./../models/Schema";
 import { Header, IRelationEndpoint, Row, Table } from "./FabricGenerator";
-import { Relation } from './FabricGenerator';
+import { Relation } from "./FabricGenerator";
+import { Endpoint } from "./../models/Endpoint";
 
 export class FabricRenderer implements IRenderer {
   canvas: Canvas | undefined;
@@ -58,23 +59,20 @@ export class FabricRenderer implements IRenderer {
   }
 
   render(schema: Schema): void {
-    var previousTotalWidth = 0;
-    
     // CREATE TABLE LIST
     var tables = schema.tables.map((t, i) => {
-      
       // Table
-      let table : Table = new Table({name: t.name});
+      let table: Table = new Table({ tableName: t.name });
 
       // Table Title
       table.addHeader({ label: t.name, table });
 
       // Fields
-      table.addRows(t.fields.map((field, i) => ({label: field.name,table})));
+      table.addRows(t.fields.map((field, i) => ({ label: field.name, table })));
 
       return table;
     });
-    
+
     let maxTop = 1000;
     let minTop = 50;
     let maxLeft = 1000;
@@ -85,41 +83,51 @@ export class FabricRenderer implements IRenderer {
       let fabricTable = t.getGroup({
         top: 100 + Math.random() * (maxTop - minTop) + minTop,
         // left: previousTotalWidth + 10,
-        left:  Math.random() * (maxLeft - minLeft) + minLeft,
+        left: Math.random() * (maxLeft - minLeft) + minLeft,
       });
-
-      previousTotalWidth += (t.width || 0);
 
       return fabricTable;
     });
 
+    var allRelations = new Map<string, Relation>();
     // CREATE TABLE RELATIONS
-    var fabricRelations = schema.refs.map((ref, i) => {
+    tables.forEach(table => {
+      // Find the table's relations
+      let relations = schema.refs.filter((ref) => ref.endpoints.some((e) => e.tableName === table.tableName));
 
-      let endpoints = ref.endpoints.map((ep, i) => {
-        
-        // Find the endpoint table by the name
-        let table = tables.find(t => t.name === ep.tableName);
+      // Generate Fabric Relation
+      let fabricRelations = relations.map(rel => {
+        // Generate Relation Endpoints
+        let endpoints = rel.endpoints.map(endpoint => {
+          let table = findTableByName(tables, endpoint.tableName) as Table;
+          let rows = findRowsByNames(table?.rows as Row[], endpoint.fieldNames);
+          let fabricEndpoint : IRelationEndpoint = {
+            relation: endpoint.relation,
+            table,
+            rows
+          };
 
-        if (!table) throw new Error(`Table ${ep.tableName} not found...`);
+          return fabricEndpoint;
+        });
 
-        // Find the endpoint row by the label
-        let rows = table.rows.filter(r => ep.fieldNames.includes(r.label));
+        // Instantiate Relation
+        let relation = new Relation({
+          endpoints,
+          label: ""
+        });
 
-        if (!rows.length) throw new Error(`Rows with names ${ep.fieldNames.join(", ")} not found...`);
+        if (allRelations.has(relation.id)) {
+          return allRelations.get(relation.id) as Relation;
+        }
 
-        // Create Relation
-        let fabricEndpoint: IRelationEndpoint = {
-          table : table as Table,
-          relation: ep.relation,
-          rows
-        };
-
-        return fabricEndpoint;
+        return relation;
       });
 
-      return new Relation({endpoints});
+      fabricRelations.forEach(r => {
+        if (!allRelations.has(r.id)) allRelations.set(r.id, r);
+      });
 
+      table.relations = fabricRelations;
     });
 
     if (!this.canvas) this.init();
@@ -133,16 +141,24 @@ export class FabricRenderer implements IRenderer {
     });
 
     // Add relations
-    fabricRelations.forEach((r) => {
+    allRelations.forEach((r) => {
       this.canvas?.add(r);
+      r.events.forEach(([name, target]) => this.canvas?.on(name, target));
     });
 
-    this.objectsRendered.push(...fabricTables, ...fabricRelations);
+    // this.objectsRendered.push(...fabricTables, ...fabricRelations);
 
-    Relation.events.forEach(([name, target]) => this.canvas?.on(name, target));
   }
 
   _clear(): void {
     this.canvas?.remove(...this.canvas.getObjects().concat());
   }
+}
+
+function findTableByName(tables : Table[], name : string) {
+  return tables.find((t) => t.tableName === name);
+}
+
+function findRowsByNames(rows : Row[], name : string[]) {
+  return rows.filter((r) => name.includes(r.label));
 }
