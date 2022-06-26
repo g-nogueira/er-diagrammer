@@ -19,6 +19,7 @@ export class DBMLProcessor extends BaseProcessor {
             super._render(schema);
         } catch (error) {
             this.renderer._clear();
+            console.error(error);
         }
     }
 

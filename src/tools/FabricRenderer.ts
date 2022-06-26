@@ -3,14 +3,13 @@
  * and the Processor is responsible for creating the Tables and Relationships
  */
 
-import { table } from "console";
 import { fabric } from "fabric";
-import { Canvas, IObjectOptions, Object, Rect } from "fabric/fabric-impl";
+import { Canvas, Object } from "fabric/fabric-impl";
 import { IRenderer } from "../models/IRenderer";
 import { Schema } from "./../models/Schema";
-import { Header, IRelationEndpoint, Row, Table } from "./FabricGenerator";
-import { Relation } from "./FabricGenerator";
-import { Endpoint } from "./../models/Endpoint";
+import { FabricRelation, IRelationEndpoint } from "./FabricRelation";
+import { FabricRow } from "./FabricRow";
+import { FabricTable } from "./FabricTable";
 
 export class FabricRenderer implements IRenderer {
   canvas: Canvas | undefined;
@@ -62,17 +61,18 @@ export class FabricRenderer implements IRenderer {
     // CREATE TABLE LIST
     var tables = schema.tables.map((t, i) => {
       // Table
-      let table: Table = new Table({ tableName: t.name });
+      let table: FabricTable = new FabricTable({ tableName: t.name, tableAlias: t.alias });
 
       // Table Title
       table.addHeader({ label: t.name, table });
 
-      // Fields
+      // Table Fields
       table.addRows(t.fields.map((field, i) => ({ label: field.name, table })));
 
       return table;
     });
 
+    // MAX TABLE POSITIONS
     let maxTop = 1000;
     let minTop = 50;
     let maxLeft = 1000;
@@ -89,7 +89,7 @@ export class FabricRenderer implements IRenderer {
       return fabricTable;
     });
 
-    var allRelations = new Map<string, Relation>();
+    var allRelations = new Map<string, FabricRelation>();
     // CREATE TABLE RELATIONS
     tables.forEach(table => {
       // Find the table's relations
@@ -99,8 +99,8 @@ export class FabricRenderer implements IRenderer {
       let fabricRelations = relations.map(rel => {
         // Generate Relation Endpoints
         let endpoints = rel.endpoints.map(endpoint => {
-          let table = findTableByName(tables, endpoint.tableName) as Table;
-          let rows = findRowsByNames(table?.rows as Row[], endpoint.fieldNames);
+          let table = findTableByName(tables, endpoint.tableName) as FabricTable;
+          let rows = findRowsByNames(table?.rows as FabricRow[], endpoint.fieldNames);
           let fabricEndpoint : IRelationEndpoint = {
             relation: endpoint.relation,
             table,
@@ -111,13 +111,13 @@ export class FabricRenderer implements IRenderer {
         });
 
         // Instantiate Relation
-        let relation = new Relation({
+        let relation = new FabricRelation({
           endpoints,
           label: ""
         });
 
         if (allRelations.has(relation.id)) {
-          return allRelations.get(relation.id) as Relation;
+          return allRelations.get(relation.id) as FabricRelation;
         }
 
         return relation;
@@ -155,10 +155,10 @@ export class FabricRenderer implements IRenderer {
   }
 }
 
-function findTableByName(tables : Table[], name : string) {
+function findTableByName(tables : FabricTable[], name : string) {
   return tables.find((t) => t.tableName === name);
 }
 
-function findRowsByNames(rows : Row[], name : string[]) {
+function findRowsByNames(rows : FabricRow[], name : string[]) {
   return rows.filter((r) => name.includes(r.label));
 }
