@@ -58,56 +58,58 @@ export class FabricRenderer implements IRenderer {
   }
 
   render(schema: Schema): void {
+    if (!this.canvas) this.init();
+    
+    this.canvas?.clear();
+
+    var uniqueRelations = new Map<string, FabricRelation>();
+
+    // MAX TABLE POSITIONS
+    var minTop = 50;
+    var minLeft = 0;
+    var maxLeft = 1000;
+    var maxTop = 1000;
+    
+
     // CREATE TABLE LIST
-    var tables = schema.tables.map((t, i) => {
+    var fabricTables = schema.tables.map((t, i) => {
       // Table
-      let table: FabricTable = new FabricTable({ tableName: t.name, tableAlias: t.alias });
+      let table: FabricTable = new FabricTable({
+        tableName: t.name,
+        tableAlias: t.alias,
+        top: 100 + Math.random() * (maxTop - minTop) + minTop,
+        left: 100 + Math.random() * (maxLeft - minLeft) + minLeft
+      });
 
       // Table Title
       table.addHeader({ label: t.name, table });
 
       // Table Fields
-      table.addRows(t.fields.map((field, i) => ({ label: field.name, table })));
+      table.addRows(t.fields.map(field => ({ label: field.name })));
 
       return table;
     });
 
-    // MAX TABLE POSITIONS
-    let maxTop = 1000;
-    let minTop = 50;
-    let maxLeft = 1000;
-    let minLeft = 0;
 
-    // SET TABLE POSITIONS
-    var fabricTables = tables.map((t, i) => {
-      let fabricTable = t.getGroup({
-        top: 100 + Math.random() * (maxTop - minTop) + minTop,
-        // left: previousTotalWidth + 10,
-        left: Math.random() * (maxLeft - minLeft) + minLeft,
-      });
-
-      return fabricTable;
-    });
-
-    var allRelations = new Map<string, FabricRelation>();
     // CREATE TABLE RELATIONS
-    tables.forEach(table => {
+    fabricTables.forEach(table => {
       // Find the table's relations
-      let relations = schema.refs.filter((ref) => ref.endpoints.some((e) => e.tableName === table.tableName));
+      let relations = schema.refs.filter((ref) => ref.endpoints.some((e) => [table.tableName, table.tableAlias].includes(e.tableName)));
 
       // Generate Fabric Relation
       let fabricRelations = relations.map(rel => {
+
         // Generate Relation Endpoints
         let endpoints = rel.endpoints.map(endpoint => {
-          let table = findTableByName(tables, endpoint.tableName) as FabricTable;
+
+          let table = findTableByName(fabricTables, endpoint.tableName) as FabricTable;
           let rows = findRowsByNames(table?.rows as FabricRow[], endpoint.fieldNames);
-          let fabricEndpoint : IRelationEndpoint = {
+
+          return {
             relation: endpoint.relation,
             table,
             rows
-          };
-
-          return fabricEndpoint;
+          } as IRelationEndpoint;
         });
 
         // Instantiate Relation
@@ -116,23 +118,19 @@ export class FabricRenderer implements IRenderer {
           label: ""
         });
 
-        if (allRelations.has(relation.id)) {
-          return allRelations.get(relation.id) as FabricRelation;
+        if (uniqueRelations.has(relation.id)) {
+          return uniqueRelations.get(relation.id) as FabricRelation;
         }
 
         return relation;
       });
 
       fabricRelations.forEach(r => {
-        if (!allRelations.has(r.id)) allRelations.set(r.id, r);
+        if (!uniqueRelations.has(r.id)) uniqueRelations.set(r.id, r);
       });
 
       table.relations = fabricRelations;
     });
-
-    if (!this.canvas) this.init();
-
-    this.canvas?.clear();
 
     // ADD TO CANVAS
     // Add tables
@@ -141,7 +139,7 @@ export class FabricRenderer implements IRenderer {
     });
 
     // Add relations
-    allRelations.forEach((r) => {
+    uniqueRelations.forEach((r) => {
       this.canvas?.add(r);
       r.events.forEach(([name, target]) => this.canvas?.on(name, target));
     });
@@ -156,7 +154,7 @@ export class FabricRenderer implements IRenderer {
 }
 
 function findTableByName(tables : FabricTable[], name : string) {
-  return tables.find((t) => t.tableName === name);
+  return tables.find((t) => [t.tableName, t.tableAlias].includes(name));
 }
 
 function findRowsByNames(rows : FabricRow[], name : string[]) {

@@ -1,4 +1,5 @@
-import fabric, { IGroupOptions } from "fabric/fabric-impl";
+import { fabric } from "fabric";
+import { IGroupOptions } from "fabric/fabric-impl";
 import { FabricRow } from "./FabricRow";
 import { FabricTable } from "./FabricTable";
 
@@ -43,8 +44,8 @@ export interface IRelationEndpoint {
     }
   
     getPointCoordinates() : number[][] {
-      var table1 = this.endpoints[0].table.parent;
-      var table2 = this.endpoints[1].table.parent;
+      var table1 = this.endpoints[0].table;
+      var table2 = this.endpoints[1].table;
   
       var lineStart = new fabric.Point(0,0);
       var lineStartControl = new fabric.Point(0,0);
@@ -101,10 +102,9 @@ export interface IRelationEndpoint {
           "object:moving",
           (e) => {
             // Is Target a Table?
-            if (e.target?.type !== "TableGroup") return;
+            if (e.target?.type !== "Table") return;
   
-            let group = e.target as fabric.Group;
-            let table = group.getObjects().find((o: fabric.Object) => o.type === "Table") as FabricTable;
+            let table = e.target as FabricTable;
             let relations = table.relations;
             
             // Is this Relations in the Target Table's Relations?

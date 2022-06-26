@@ -1,4 +1,5 @@
-import fabric, { IRectOptions, ITextOptions } from "fabric/fabric-impl";
+import { fabric } from "fabric";
+import { IRectOptions, ITextOptions } from "fabric/fabric-impl";
 import { fillDefaultValues } from "./FabricGenerator";
 import { FabricTable } from "./FabricTable";
 
