@@ -333,8 +333,13 @@ export class Relation extends fabric.Path {
     this.label = options.label;
     this.endpoints = options.endpoints;
 
+    this.id = `${this.endpoints[0].table.tableName}_${this.endpoints[0].rows[0].label}_${this.endpoints[1].table.tableName}_${this.endpoints[1].rows[0].label}`;
+
+    this.recalculateCoordinates();
+  }
+
+  recalculateCoordinates() {
     let coordinates = this.getPointCoordinates();
-    this.id = `${this.endpoints[0].table.tableName}_${this.endpoints[0].rows[0].text}_${this.endpoints[1].table.tableName}_${this.endpoints[1].rows[0].text}`;
 
     if (!this.path) return;
     
@@ -343,7 +348,6 @@ export class Relation extends fabric.Path {
     // @ts-ignore: Unreachable code error
     this.path[1] = [this.path[1][0], ...coordinates[1]];
     
-    // this.endpoints.forEach((e) => e.table.relations?.add(e));
   }
 
   getPointCoordinates() : number[][] {
@@ -404,24 +408,17 @@ export class Relation extends fabric.Path {
       [
         "object:moving",
         (e) => {
-          if (e.target?.type === "TableGroup") {
-            let group = e.target as fabric.Group;
-            let table = group.getObjects().find((o: fabric.Object) => o.type === "Table") as Table;
-            let relations = table.relations;
+          // Is Target a Table?
+          if (e.target?.type !== "TableGroup") return;
 
-            relations.forEach((relation) => {
-              let coordinates = this.getPointCoordinates();
+          let group = e.target as fabric.Group;
+          let table = group.getObjects().find((o: fabric.Object) => o.type === "Table") as Table;
+          let relations = table.relations;
+          
+          // Is this Relations in the Target Table's Relations?
+          if (!relations.map(r => r.id).includes(this.id)) return;
 
-              // relation.dirty = true;
-
-              // @ts-ignore: Unreachable code error
-              relation.path[0] = [relation.path[0][0], ...coordinates[0]];
-              // @ts-ignore: Unreachable code error
-              relation.path[1] = [relation.path[1][0], ...coordinates[1]];
-            });
-
-            // e.target.canvas?.requestRenderAll();
-          }
+          this.recalculateCoordinates();
         },
       ],
     ];
