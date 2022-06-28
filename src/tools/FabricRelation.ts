@@ -21,7 +21,7 @@ export interface IRelationEndpoint {
     endpoints: IRelationEndpoint[];
   
     constructor(options: IRelationOptions) {
-      super("M100,100 C200,100 100,200 200,200", { fill: "", stroke: "black", objectCaching: false, selectable: true, evented: false });
+      super("M100,100 C200,100 100,200 200,200", { fill: "", stroke: "black", strokeWidth: 2, objectCaching: false, selectable: true, evented: false });
   
       this.label = options.label;
       this.endpoints = options.endpoints;
