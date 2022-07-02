@@ -19,27 +19,7 @@ export class FabricRenderer implements IRenderer {
     canvas: {
       width: 1000,
       height: 1000,
-    },
-    table: {
-      width: 200,
-    },
-    row: {
-      paddingX: 5,
-      paddingY: 2,
-      height: 30,
-      fill: "white",
-      stroke: "black",
-      strokeWidth: 2,
-      fontSize: 20,
-      fillStyle: "#000",
-    },
-    header: {
-      height: 35,
-      fill: "#316896",
-      stroke: "black",
-      strokeWidth: 2,
-      fontSize: 20,
-      fillStyle: "white",
+      backgroundColor: "#fbfbfb",
     },
   };
 
@@ -51,7 +31,11 @@ export class FabricRenderer implements IRenderer {
 
   init() {
     if (this.canvasId && !this.canvas) {
-      this.canvas = new fabric.Canvas(this.canvasId, { width: this.options.canvas.width, height: this.options.canvas.height });
+      this.canvas = new fabric.Canvas(this.canvasId, {
+        width: this.options.canvas.width,
+        height: this.options.canvas.height,
+        backgroundColor: this.options.canvas.backgroundColor,
+      });
     } else {
       throw new Error("Property canvasId not set. It's required to setup this property to initialize the Canvas.");
     }
@@ -59,7 +43,7 @@ export class FabricRenderer implements IRenderer {
 
   render(schema: Schema): void {
     if (!this.canvas) this.init();
-    
+
     this.canvas?.clear();
 
     var uniqueRelations = new Map<string, FabricRelation>();
@@ -69,7 +53,6 @@ export class FabricRenderer implements IRenderer {
     var minLeft = 0;
     var maxLeft = 1000;
     var maxTop = 1000;
-    
 
     // CREATE TABLE LIST
     var fabricTables = schema.tables.map((t, i) => {
@@ -78,44 +61,41 @@ export class FabricRenderer implements IRenderer {
         tableName: t.name,
         tableAlias: t.alias,
         top: 100 + Math.random() * (maxTop - minTop) + minTop,
-        left: 100 + Math.random() * (maxLeft - minLeft) + minLeft
+        left: 100 + Math.random() * (maxLeft - minLeft) + minLeft,
       });
 
       // Table Title
       table.addHeader({ label: t.name, table });
 
       // Table Fields
-      table.addRows(t.fields.map(field => ({ label: field.name })));
+      table.addRows(t.fields.map((field) => ({ label: field.name })));
 
       return table;
     });
 
-
     // CREATE TABLE RELATIONS
-    fabricTables.forEach(table => {
+    fabricTables.forEach((table) => {
       // Find the table's relations
       let relations = schema.refs.filter((ref) => ref.endpoints.some((e) => [table.tableName, table.tableAlias].includes(e.tableName)));
 
       // Generate Fabric Relation
-      let fabricRelations = relations.map(rel => {
-
+      let fabricRelations = relations.map((rel) => {
         // Generate Relation Endpoints
-        let endpoints = rel.endpoints.map(endpoint => {
-
+        let endpoints = rel.endpoints.map((endpoint) => {
           let table = findTableByName(fabricTables, endpoint.tableName) as FabricTable;
           let rows = findRowsByNames(table?.rows as FabricRow[], endpoint.fieldNames);
 
           return {
             relation: endpoint.relation,
             table,
-            rows
+            rows,
           } as IRelationEndpoint;
         });
 
         // Instantiate Relation
         let relation = new FabricRelation({
           endpoints,
-          label: ""
+          label: "",
         });
 
         if (uniqueRelations.has(relation.id)) {
@@ -125,7 +105,7 @@ export class FabricRenderer implements IRenderer {
         return relation;
       });
 
-      fabricRelations.forEach(r => {
+      fabricRelations.forEach((r) => {
         if (!uniqueRelations.has(r.id)) uniqueRelations.set(r.id, r);
       });
 
@@ -145,7 +125,6 @@ export class FabricRenderer implements IRenderer {
     });
 
     // this.objectsRendered.push(...fabricTables, ...fabricRelations);
-
   }
 
   _clear(): void {
@@ -153,10 +132,10 @@ export class FabricRenderer implements IRenderer {
   }
 }
 
-function findTableByName(tables : FabricTable[], name : string) {
+function findTableByName(tables: FabricTable[], name: string) {
   return tables.find((t) => [t.tableName, t.tableAlias].includes(name));
 }
 
-function findRowsByNames(rows : FabricRow[], name : string[]) {
+function findRowsByNames(rows: FabricRow[], name: string[]) {
   return rows.filter((r) => name.includes(r.label));
 }
