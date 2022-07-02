@@ -30,8 +30,8 @@ export class FabricRow extends fabric.Group {
   paddingY: number = 2;
 
   _rowRectOptions: IRectOptions = {
-    strokeWidth: 2,
-    fill: "white",
+    strokeWidth: 0,
+    fill: "#f6f6f6",
     stroke: "black",
     height: 30,
     width: this.minWidth,
@@ -52,7 +52,7 @@ export class FabricRow extends fabric.Group {
    * Constructor
    * @param [options] Options object
    */
-  constructor(options?: IRowOptions) {
+  constructor(options: IRowOptions = {}) {
     super();
 
     options?.top && (this.top = options.top);
@@ -119,21 +119,5 @@ export class FabricRow extends fabric.Group {
 
     this.text.left = x;
     this.text.setOptions(fillDefaultValues({ fontSize: this.fontSize, fill: this.textColor }, this._textOptions));
-  }
-
-  _render(ctx: CanvasRenderingContext2D): void {
-    super._render(ctx);
-
-    // if (!this.label || !this.width || !this.height) return;
-
-    // ctx.font = `${this.fontSize}px Helvetica`;
-    // ctx.fillStyle = this.fillStyle;
-    // ctx.textAlign = this.textAlign;
-
-    // if (this.textAlign === "center") {
-    //   ctx.fillText(this.label, 0, this.height / 2 - this.fontSize / 2);
-    // } else {
-    //   ctx.fillText(this.label, -this.width / 2 + this.paddingX, +this.height / 2 - this.fontSize / 2);
-    // }
   }
 }
