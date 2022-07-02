@@ -141,7 +141,7 @@ export class FabricRenderer implements IRenderer {
     // Add relations
     uniqueRelations.forEach((r) => {
       this.canvas?.add(r);
-      r.events.forEach(([name, target]) => this.canvas?.on(name, target));
+      r.events.forEach(([name, target]) => this.canvas?.on(name, target as () => {}));
     });
 
     // this.objectsRendered.push(...fabricTables, ...fabricRelations);
