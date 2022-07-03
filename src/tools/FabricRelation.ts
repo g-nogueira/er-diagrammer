@@ -24,7 +24,7 @@ export class FabricRelation extends fabric.Path {
 
   hoverEffect = {
     isHovered: true,
-    slack: 5,
+    tolerance: 5,
     strokeWidth: 3,
     stroke: "#619bcc",
   };
@@ -219,10 +219,10 @@ export class FabricRelation extends fabric.Path {
     groups.forEach((points) => {
       if (isHovering) return;
 
-      let lineStartX = Math.min(points[0][0], points[1][0]) - this.hoverEffect.slack;
-      let lineEndX = Math.max(points[0][0], points[1][0]) + this.hoverEffect.slack;
-      let lineStartY = Math.min(points[0][1], points[1][1]) - this.hoverEffect.slack;
-      let lineEndY = Math.max(points[0][1], points[1][1]) + this.hoverEffect.slack;
+      let lineStartX = Math.min(points[0][0], points[1][0]) - this.hoverEffect.tolerance;
+      let lineEndX = Math.max(points[0][0], points[1][0]) + this.hoverEffect.tolerance;
+      let lineStartY = Math.min(points[0][1], points[1][1]) - this.hoverEffect.tolerance;
+      let lineEndY = Math.max(points[0][1], points[1][1]) + this.hoverEffect.tolerance;
 
       if (mousePoint.x >= lineStartX && mousePoint.x <= lineEndX && mousePoint.y >= lineStartY && mousePoint.y <= lineEndY) {
         isHovering = true;

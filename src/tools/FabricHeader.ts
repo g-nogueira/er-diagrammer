@@ -1,3 +1,4 @@
+import { IEvent } from "fabric/fabric-impl";
 import { fillDefaultValues } from "./FabricGenerator";
 import { IRowOptions, FabricRow } from "./FabricRow";
 
@@ -21,19 +22,23 @@ export class FabricHeader extends FabricRow {
   
       options = fillDefaultValues<IHeaderOptions>(options, this._headerOptions);
   
-      if (this.rowRect) {
-        options.fill && (this.rowRect.fill = options.fill);
+      if (this._rowRect) {
+        options.fill && (this._rowRect.fill = options.fill);
       }
   
-      if (this.text) {
+      if (this._text) {
         options.textColor && (this.textColor = options.textColor);
         options.textAlign && (this.textAlign = options.textAlign);
-        this._recalculateText();
+        this._recalculateTextAlignment();
       }
   
       options.height && this.setHeight(options?.height);
   
       this.table && (this.table.header = this);
+    }
+
+    get events(): [string, ((e: IEvent) => void) | ((e: IEvent<MouseEvent>) => void)][] {
+      return [];
     }
   }
   

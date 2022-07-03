@@ -1,4 +1,5 @@
 import { fabric } from "fabric";
+import { IEvent } from "fabric/fabric-impl";
 import { FabricHeader, IHeaderOptions } from "./FabricHeader";
 import { FabricRelation } from "./FabricRelation";
 import { FabricRow, IRowOptions } from "./FabricRow";
@@ -13,9 +14,9 @@ export class FabricTable extends fabric.Group {
   tableName: string;
   tableAlias: string;
   rows: FabricRow[] = [];
-  _rowGroup: fabric.Group;
-  header?: FabricHeader;
-
+  header: FabricHeader = new FabricHeader();
+  
+  _rowGroup: fabric.Group = new fabric.Group([], {subTargetCheck: true, evented: true});
   relations: FabricRelation[] = [];
 
   /**
@@ -24,6 +25,8 @@ export class FabricTable extends fabric.Group {
    */
   constructor(options: ITableOptions) {
     super([], options);
+
+    this.add(this._rowGroup);
 
     options.top && (this.top = options.top);
     options.left && (this.left = options.left);
@@ -39,9 +42,15 @@ export class FabricTable extends fabric.Group {
     this.originY = "top";
     this.originX = "center";
 
-    this._rowGroup = new fabric.Group([]);
-    
-    this.add(this._rowGroup);
+    this.subTargetCheck = true;
+
+  }
+
+  get events(): [string, ((e: IEvent) => void) | ((e: IEvent<MouseEvent>) => void)][] {
+    const rowEvents = this.rows.flatMap(r => r.events);
+    const headerEvents = this.header.events;
+
+    return [...rowEvents, ...headerEvents];
   }
 
   addHeader(options: IHeaderOptions) {

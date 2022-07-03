@@ -1,5 +1,5 @@
 import { fabric } from "fabric";
-import { IRectOptions, ITextOptions } from "fabric/fabric-impl";
+import { IEvent, IRectOptions, ITextOptions } from "fabric/fabric-impl";
 import { fillDefaultValues } from "./FabricGenerator";
 import { FabricTable } from "./FabricTable";
 
@@ -16,8 +16,6 @@ export interface IRowOptions extends fabric.IRectOptions {
 
 export class FabricRow extends fabric.Group {
   type = "TableRow";
-  rowRect?: fabric.Rect;
-  text?: fabric.Text;
   table?: FabricTable;
 
   label: string = "";
@@ -29,7 +27,10 @@ export class FabricRow extends fabric.Group {
   paddingX: number = 5;
   paddingY: number = 2;
 
-  _rowRectOptions: IRectOptions = {
+  _text: fabric.Text = new fabric.Text("");
+  _rowRect: fabric.Rect;
+
+  _defaultOptions: IRectOptions = {
     strokeWidth: 0,
     fill: "#f6f6f6",
     stroke: "black",
@@ -53,7 +54,7 @@ export class FabricRow extends fabric.Group {
    * @param [options] Options object
    */
   constructor(options: IRowOptions = {}) {
-    super();
+    super([], {evented: true});
 
     options?.top && (this.top = options.top);
     options?.left && (this.left = options.left);
@@ -75,49 +76,74 @@ export class FabricRow extends fabric.Group {
     delete options?.originX;
     delete options?.originY;
 
-    this.rowRect = new fabric.Rect(fillDefaultValues(options, this._rowRectOptions));
+    this._rowRect = new fabric.Rect(fillDefaultValues(options, this._defaultOptions));
 
-    this.rowRect.width = Math.max(options?.table?.width || 0, this.minWidth);
-    this.rowRect.width = Math.max(this.label.length * this.fontSize, this.rowRect.width);
+    this._rowRect.width = Math.max(options?.table?.width || 0, this.minWidth);
+    this._rowRect.width = Math.max(this.label.length * this.fontSize, this._rowRect.width);
 
-    this.width = this.rowRect.width;
-    this.height = this.rowRect.height;
+    this.width = this._rowRect.width;
+    this.height = this._rowRect.height;
 
-    this.add(this.rowRect);
+    this.add(this._rowRect);
     this.addText(this.label);
   }
 
-  addText(label: string = "") {
-    var text = new fabric.Text(label, fillDefaultValues({ fontSize: this.fontSize, fill: this.textColor }, this._textOptions));
-    this.text = text;
+  get events(): [string, ((e: IEvent) => void) | ((e: IEvent<MouseEvent>) => void)][] {
+    return [
+      [
+        "mouse:over",
+        (e: IEvent<MouseEvent>) => {
+          console.log(e.subTargets);
+          if (!(e.subTargets && e.subTargets.some((e) => e.type === this.type))) return;
 
-    this.add(text);
-    this._recalculateText();
+          this._rowRect.fill = "#000";
+        },
+      ],
+      [
+        "mouse:out",
+        (e: IEvent<MouseEvent>) => {
+          if (!(e.subTargets && e.subTargets.some((e) => e.type === this.type))) return;
+
+          this._rowRect.fill = this._defaultOptions.fill;
+        },
+      ],
+    ];
+  }
+
+  addText(label: string = "") {
+    this._text.setOptions(fillDefaultValues({ text: label, fontSize: this.fontSize, fill: this.textColor }, this._textOptions));
+
+    this.add(this._text);
+    this._recalculateTextAlignment();
   }
 
   setWidth(value: number) {
     this.width = value;
-    this.rowRect && (this.rowRect.width = value);
-    this._recalculateText();
+    this._rowRect && (this._rowRect.width = value);
+    this._recalculateTextAlignment();
   }
 
   setHeight(value: number) {
     this.height = value;
-    this.rowRect && (this.rowRect.height = value);
+    this._rowRect && (this._rowRect.height = value);
   }
 
-  _recalculateText() {
-    if (!this.text) return;
+  /**
+   * Recalculates the text alignment
+   * @returns
+   */
+  _recalculateTextAlignment() {
+    if (!this._text) return;
 
     var x = 0;
 
     if (this.textAlign === "center") {
-      x -= (this.text.width || 0) / 2;
+      x -= (this._text.width || 0) / 2;
     } else {
-      x = -(this.rowRect?.width || 0) / 2 + this.paddingX;
+      x = -(this._rowRect?.width || 0) / 2 + this.paddingX;
     }
 
-    this.text.left = x;
-    this.text.setOptions(fillDefaultValues({ fontSize: this.fontSize, fill: this.textColor }, this._textOptions));
+    this._text.left = x;
+    this._text.setOptions(fillDefaultValues({ fontSize: this.fontSize, fill: this.textColor }, this._textOptions));
   }
 }
