@@ -5,6 +5,7 @@
 
 import { fabric } from "fabric";
 import { Canvas, Object } from "fabric/fabric-impl";
+import { MouseEvent } from "react";
 import { IRenderer } from "../../models/IRenderer";
 import { Schema } from "../../models/Schema";
 import { FabricRelation, IRelationEndpoint } from "./FabricRelation";
@@ -21,6 +22,9 @@ export class FabricRenderer implements IRenderer {
       height: 1000,
       backgroundColor: "#fbfbfb",
     },
+    keybindings: {
+      pan: 2,
+    },
   };
 
   constructor(containerId: string, options?: any) {
@@ -35,7 +39,12 @@ export class FabricRenderer implements IRenderer {
         width: this.options.canvas.width,
         height: this.options.canvas.height,
         backgroundColor: this.options.canvas.backgroundColor,
+        fireMiddleClick: true,
       });
+
+      this._toggleDragMode(true);
+      this._toggleZoom();
+
     } else {
       throw new Error("Property canvasId not set. It's required to setup this property to initialize the Canvas.");
     }
@@ -129,6 +138,130 @@ export class FabricRenderer implements IRenderer {
   _clear(): void {
     this.canvas?.remove(...this.canvas.getObjects().concat());
   }
+
+  _toggleDragMode(dragMode: boolean) {
+    // Solution from https://codepen.io/sabatino/pen/EwJYeO
+
+    const STATE_IDLE = "idle";
+    const STATE_PANNING = "panning";
+    const that = this;
+
+    // Remember the previous X and Y coordinates for delta calculations
+    let lastClientX: number;
+    let lastClientY: number;
+    // Keep track of the state
+    let state = STATE_IDLE;
+    // We're entering dragmode
+    if (dragMode && this.canvas) {
+      // Discard any active object
+      this.canvas.discardActiveObject();
+      // Set the cursor to 'move'
+      this.canvas.defaultCursor = "move";
+      // Loop over all objects and disable events / selectable. We remember its value in a temp variable stored on each object
+      this.canvas.forEachObject(function (object) {
+        // @ts-ignore: Unreachable code error
+        object.prevEvented = object.evented;
+        // @ts-ignore: Unreachable code error
+        object.prevSelectable = object.selectable;
+        object.evented = false;
+        object.selectable = false;
+      });
+      // Remove selection ability on the canvas
+      this.canvas.selection = false;
+      // When MouseUp fires, we set the state to idle
+      this.canvas.on("mouse:up", function (e) {
+        if (e.button !== that.options.keybindings.pan) return;
+        state = STATE_IDLE;
+      });
+      // When MouseDown fires, we set the state to panning
+      this.canvas.on("mouse:down", (e) => {
+        if (e.button !== that.options.keybindings.pan) return;
+
+        state = STATE_PANNING;
+        lastClientX = e.e.clientX;
+        lastClientY = e.e.clientY;
+      });
+      // When the mouse moves, and we're panning (mouse down), we continue
+      this.canvas.on("mouse:move", (e) => {
+        if (state === STATE_PANNING && e && e.e) {
+          // let delta = new fabric.Point(e.e.movementX, e.e.movementY); // No Safari support for movementX and movementY
+          // For cross-browser compatibility, I had to manually keep track of the delta
+
+          // Calculate deltas
+          let deltaX = 0;
+          let deltaY = 0;
+          if (lastClientX) {
+            deltaX = e.e.clientX - lastClientX;
+          }
+          if (lastClientY) {
+            deltaY = e.e.clientY - lastClientY;
+          }
+          // Update the last X and Y values
+          lastClientX = e.e.clientX;
+          lastClientY = e.e.clientY;
+
+          let delta = new fabric.Point(deltaX, deltaY);
+          this.canvas?.relativePan(delta);
+          // @ts-ignore: Unreachable code error
+          // this.canvas?.trigger("moved");
+        }
+      });
+    } else {
+      if (!this.canvas) return;
+
+      // When we exit dragmode, we restore the previous values on all objects
+      this.canvas.forEachObject(function (object) {
+        // @ts-ignore: Unreachable code error
+        object.evented = object.prevEvented !== undefined ? object.prevEvented : object.evented;
+        // @ts-ignore: Unreachable code error
+        object.selectable = object.prevSelectable !== undefined ? object.prevSelectable : object.selectable;
+      });
+      // Reset the cursor
+      this.canvas.defaultCursor = "default";
+      // Remove the event listeners
+      this.canvas.off("mouse:up");
+      this.canvas.off("mouse:down");
+      this.canvas.off("mouse:move");
+      // Restore selection ability on the canvas
+      this.canvas.selection = true;
+    }
+  }
+
+  _toggleZoom() {
+    // Solution from http://fabricjs.com/fabric-intro-part-5
+    const that = this;
+
+    if (!that.canvas) return;
+
+    that.canvas.on("mouse:wheel", function (this: any, opt) {
+      if (!that.canvas) return;
+
+      var delta = opt.e.deltaY;
+      var zoom = that.canvas.getZoom();
+      zoom *= 0.999 ** delta;
+      if (zoom > 20) zoom = 20;
+      if (zoom < 0.01) zoom = 0.01;
+      that.canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+      opt.e.preventDefault();
+      opt.e.stopPropagation();
+      var vpt = this.viewportTransform;
+      if (zoom < 400 / 1000) {
+        vpt[4] = 200 - (1000 * zoom) / 2;
+        vpt[5] = 200 - (1000 * zoom) / 2;
+      } else {
+        if (vpt[4] >= 0) {
+          vpt[4] = 0;
+        } else if (vpt[4] < that.canvas.getWidth() - 1000 * zoom) {
+          vpt[4] = that.canvas.getWidth() - 1000 * zoom;
+        }
+        if (vpt[5] >= 0) {
+          vpt[5] = 0;
+        } else if (vpt[5] < that.canvas.getHeight() - 1000 * zoom) {
+          vpt[5] = that.canvas.getHeight() - 1000 * zoom;
+        }
+      }
+    });
+  }
 }
 
 function findTableByName(tables: FabricTable[], name: string) {
@@ -141,13 +274,13 @@ function findRowsByNames(rows: FabricRow[], name: string[]) {
 
 function toggleToGrid(canvas: fabric.Canvas, enabled = true) {
   const grid = 50;
-  const onObjectMoving = (options : fabric.IEvent<Event>) => {
+  const onObjectMoving = (options: fabric.IEvent<Event>) => {
     options.target &&
       options.target.set({
         left: Math.round((options.target.left || 0) / grid) * grid,
         top: Math.round((options.target.top || 0) / grid) * grid,
       });
-  }
+  };
 
   if (enabled) {
     // Create grid
@@ -157,10 +290,7 @@ function toggleToGrid(canvas: fabric.Canvas, enabled = true) {
     }
 
     canvas.on("object:moving", onObjectMoving);
-  }
-  else {
+  } else {
     canvas.off("object:moving", onObjectMoving);
   }
-
-
 }

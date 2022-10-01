@@ -1,6 +1,6 @@
 import { fabric } from "fabric";
 import { IEvent, IGroupOptions } from "fabric/fabric-impl";
-import { fillDefaultValues } from "../../tools/FabricGenerator";
+import { fillDefaultValues } from "./FabricGenerator";
 import { FabricRow } from "./FabricRow";
 import { FabricTable } from "./FabricTable";
 

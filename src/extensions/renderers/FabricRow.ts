@@ -1,6 +1,6 @@
 import { fabric } from "fabric";
 import { IEvent, IRectOptions, ITextOptions } from "fabric/fabric-impl";
-import { fillDefaultValues } from "../../tools/FabricGenerator";
+import { fillDefaultValues } from "./FabricGenerator";
 import { FabricTable } from "./FabricTable";
 
 export interface IRowOptions extends fabric.IRectOptions {

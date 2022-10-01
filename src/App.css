@@ -38,14 +38,17 @@
   }
 }
 
-
 .grid-container {
   display: grid;
-  grid-template-areas: 
+  /* grid-template-areas: 
     "lsidebar toolbox settings"
-    "lsidebar canvas settings";
-  
-  grid-template-columns: 1fr 5fr 1fr;
+    "lsidebar canvas settings"; */
+
+  grid-template-areas:
+    "lsidebar canvas canvas"
+    "lsidebar canvas canvas";
+
+  grid-template-columns: 1fr 5fr auto;
   grid-template-rows: 1fr 20fr;
 }
 
@@ -56,4 +59,3 @@
 #canvas {
   grid-area: canvas;
 }
-
