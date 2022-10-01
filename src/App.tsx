@@ -16,9 +16,13 @@ function App() {
   }, []);
 
   return (
-    <div className="App" style={{ height: "100%", display: "flex" }}>
-      <CodeEditor></CodeEditor>
-      <ERModel DBML={DBMLCode}></ERModel>
+    <div className="App grid-container">
+      <div id="codeEditor">
+        <CodeEditor></CodeEditor>
+      </div>
+      <div id="canvas">
+        <ERModel DBML={DBMLCode}></ERModel>
+      </div>
     </div>
   );
 }

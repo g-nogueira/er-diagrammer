@@ -1,0 +1,24 @@
+.ace_scrollbar:where(.ace_scrollbar-v, .ace_scrollbar-h)::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  /* background-color: #F5F5F5; */
+}
+
+.ace_scrollbar:where(.ace_scrollbar-v, .ace_scrollbar-h)::-webkit-scrollbar-track {
+  background: transparent;
+  /* -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); */
+  /* border-radius: 10px; */
+  background-color: #282828;
+}
+
+.ace_scrollbar:where(.ace_scrollbar-v, .ace_scrollbar-h)::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 8px;
+  /* border-radius: 10px; */
+  /* -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3); */
+  /* background-color: #555; */
+}
+
+.ace_scrollbar:where(.ace_scrollbar-v, .ace_scrollbar-h)::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
