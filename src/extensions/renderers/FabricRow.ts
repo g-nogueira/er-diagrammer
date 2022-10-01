@@ -1,6 +1,6 @@
 import { fabric } from "fabric";
 import { IEvent, IRectOptions, ITextOptions } from "fabric/fabric-impl";
-import { fillDefaultValues } from "./FabricGenerator";
+import { fillDefaultValues } from "../../tools/FabricGenerator";
 import { FabricTable } from "./FabricTable";
 
 export interface IRowOptions extends fabric.IRectOptions {
@@ -17,7 +17,8 @@ export interface IRowOptions extends fabric.IRectOptions {
 export class FabricRow extends fabric.Group {
   type = "TableRow";
   table?: FabricTable;
-
+  order = 0;
+  
   label: string = "";
   fontSize: number = 20;
   textColor: string = "black";
@@ -39,6 +40,12 @@ export class FabricRow extends fabric.Group {
     originX: "center",
     originY: "center",
     left: 0,
+  };
+
+  _hoverOptions: IRectOptions = {
+    strokeWidth: 1,
+    fill: "#000",
+    stroke: "black",
   };
 
   _textOptions: ITextOptions = {
@@ -91,22 +98,22 @@ export class FabricRow extends fabric.Group {
   get events(): [string, ((e: IEvent) => void) | ((e: IEvent<MouseEvent>) => void)][] {
     return [
       [
-        "mouse:over",
+        "mouse:move",
         (e: IEvent<MouseEvent>) => {
-          console.log(e.subTargets);
-          if (!(e.subTargets && e.subTargets.some((e) => e.type === this.type))) return;
+          let fill = "";
+          if (e.subTargets && e.subTargets.some((e) => e === this)) {
+            fill = this._hoverOptions.fill as string;
+          }
+          else {
+            fill = this._defaultOptions.fill as string;
+          }
 
-          this._rowRect.fill = "#000";
+          if (fill !== this._rowRect.fill) {
+            console.log(fill);
+            this._rowRect.fill = fill;
+          }
         },
-      ],
-      [
-        "mouse:out",
-        (e: IEvent<MouseEvent>) => {
-          if (!(e.subTargets && e.subTargets.some((e) => e.type === this.type))) return;
-
-          this._rowRect.fill = this._defaultOptions.fill;
-        },
-      ],
+      ]
     ];
   }
 
@@ -145,5 +152,9 @@ export class FabricRow extends fabric.Group {
 
     this._text.left = x;
     this._text.setOptions(fillDefaultValues({ fontSize: this.fontSize, fill: this.textColor }, this._textOptions));
+  }
+
+  render(ctx: CanvasRenderingContext2D) {
+    super.render(ctx);
   }
 }

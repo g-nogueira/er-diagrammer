@@ -5,8 +5,8 @@
 
 import { fabric } from "fabric";
 import { Canvas, Object } from "fabric/fabric-impl";
-import { IRenderer } from "../models/IRenderer";
-import { Schema } from "./../models/Schema";
+import { IRenderer } from "../../models/IRenderer";
+import { Schema } from "../../models/Schema";
 import { FabricRelation, IRelationEndpoint } from "./FabricRelation";
 import { FabricRow } from "./FabricRow";
 import { FabricTable } from "./FabricTable";

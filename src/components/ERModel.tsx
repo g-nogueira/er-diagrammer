@@ -1,6 +1,6 @@
 import React, { CSSProperties, useEffect, useState } from "react";
-import { DBMLProcessor } from "../tools/DBMLProcessor";
-import { FabricRenderer } from "../tools/FabricRenderer";
+import { DBMLProcessor } from "../extensions/parsers/DBMLParser";
+import { FabricRenderer } from "../extensions/renderers/FabricRenderer";
 
 const ERModel: React.FC<{ DBML: string }> = ({ DBML }) => {
   const [canvasId] = useState(new Date().getTime().toString());

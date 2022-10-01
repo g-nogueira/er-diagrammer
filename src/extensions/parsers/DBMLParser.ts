@@ -1,6 +1,6 @@
 import { Parser } from '@dbml/core';
-import { BaseProcessor } from '../models/BaseProcessor';
-import { Schema } from './../models/Schema';
+import { BaseProcessor } from '../../models/BaseParser';
+import { Schema } from '../../models/Schema';
 
 export class DBMLProcessor extends BaseProcessor {
     _instanceId = new Date().getTime();

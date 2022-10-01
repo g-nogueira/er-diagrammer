@@ -26,7 +26,7 @@ export class FabricTable extends fabric.Group {
   constructor(options: ITableOptions) {
     super([], options);
 
-    this.add(this._rowGroup);
+    // this.add(this._rowGroup);
 
     options.top && (this.top = options.top);
     options.left && (this.left = options.left);
@@ -68,11 +68,13 @@ export class FabricTable extends fabric.Group {
     options.top = this.rows.reduce((prev, curr) => prev + (curr.height || 0), 0);
 
     let row = new FabricRow(options);
+
    
     row.table = this;
+    row.order = (this.rows.length && Math.max(...this.rows.map(r => r.order)) + 1) || 0;
 
     this.rows.push(row);
-    this._rowGroup.add(row);
+    this.add(row);
 
     this.recalculateHeight();
     this.recalculateWidth();
@@ -91,7 +93,7 @@ export class FabricTable extends fabric.Group {
    */
   recalculateHeight() {
     let rowGroupHeight = this.rows.reduce((prev, curr) => prev + (curr.height || 0), 0);
-    // this._rowGroup.height = rowgroupHeight;
+    this._rowGroup.height = rowGroupHeight;
     this.height = rowGroupHeight + (this.header?.height || 0);
 
     this.recalculeChildrenPositions()
@@ -121,13 +123,24 @@ export class FabricTable extends fabric.Group {
     this.header && (this.header.top = -(this.height || 0) / 2);
 
     // Move the rows to the top of the container
-    this._rowGroup.originY = "top";
+    this._rowGroup.originY = "center";
+    this._rowGroup.left = 0;
     this._rowGroup.top = -(this.height || 0) / 2;
 
+    // Move the rows to the top of the container
+    let baseAmountToMove = -(this.height || 0) / 2;
+   
+    
     // Move the rows to below the header
     this.header && (this._rowGroup.top += this.header.height || 0);
+    // this.header && this.rows.forEach(r => r.top && (r.top += this.header.height || 0));
 
-    this._rowGroup.left = 0;
+    this.rows.forEach((r) => {
+      // Center + To Top + Below Header + Go Down [order] times
+      r.top = 0 + baseAmountToMove + (this.header.height || 0) + r.order * (r.height || 0);
+      r.setCoords();
+    });
+    // this.rows.forEach(r => r.top && (r.top += baseAmountToMove));
   }
 
   render(ctx: CanvasRenderingContext2D) {

@@ -1,5 +1,5 @@
 import { IEvent } from "fabric/fabric-impl";
-import { fillDefaultValues } from "./FabricGenerator";
+import { fillDefaultValues } from "../../tools/FabricGenerator";
 import { IRowOptions, FabricRow } from "./FabricRow";
 
 export interface IHeaderOptions extends IRowOptions {}
