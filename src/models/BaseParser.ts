@@ -1,6 +1,5 @@
 import { IProcessor, ProcessorOptions } from "./IProcessor";
 import { IRenderer } from "./IRenderer";
-import { ERElement } from './Element';
 import { Schema } from "./Schema";
 
 export class BaseProcessor implements IProcessor {

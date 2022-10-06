@@ -5,7 +5,6 @@
 
 import { fabric } from "fabric";
 import { Canvas, Object } from "fabric/fabric-impl";
-import { MouseEvent } from "react";
 import { IRenderer } from "../../models/IRenderer";
 import { Schema } from "../../models/Schema";
 import { FabricRelation, IRelationEndpoint } from "./FabricRelation";
@@ -272,25 +271,25 @@ function findRowsByNames(rows: FabricRow[], name: string[]) {
   return rows.filter((r) => name.includes(r.label));
 }
 
-function toggleToGrid(canvas: fabric.Canvas, enabled = true) {
-  const grid = 50;
-  const onObjectMoving = (options: fabric.IEvent<Event>) => {
-    options.target &&
-      options.target.set({
-        left: Math.round((options.target.left || 0) / grid) * grid,
-        top: Math.round((options.target.top || 0) / grid) * grid,
-      });
-  };
+// function toggleToGrid(canvas: fabric.Canvas, enabled = true) {
+//   const grid = 50;
+//   const onObjectMoving = (options: fabric.IEvent<Event>) => {
+//     options.target &&
+//       options.target.set({
+//         left: Math.round((options.target.left || 0) / grid) * grid,
+//         top: Math.round((options.target.top || 0) / grid) * grid,
+//       });
+//   };
 
-  if (enabled) {
-    // Create grid
-    for (var i = 0; i < 600 / grid; i++) {
-      canvas.add(new fabric.Line([i * grid, 0, i * grid, 600], { stroke: "#ccc", selectable: false }));
-      canvas.add(new fabric.Line([0, i * grid, 600, i * grid], { stroke: "#ccc", selectable: false }));
-    }
+//   if (enabled) {
+//     // Create grid
+//     for (var i = 0; i < 600 / grid; i++) {
+//       canvas.add(new fabric.Line([i * grid, 0, i * grid, 600], { stroke: "#ccc", selectable: false }));
+//       canvas.add(new fabric.Line([0, i * grid, 600, i * grid], { stroke: "#ccc", selectable: false }));
+//     }
 
-    canvas.on("object:moving", onObjectMoving);
-  } else {
-    canvas.off("object:moving", onObjectMoving);
-  }
-}
+//     canvas.on("object:moving", onObjectMoving);
+//   } else {
+//     canvas.off("object:moving", onObjectMoving);
+//   }
+// }
