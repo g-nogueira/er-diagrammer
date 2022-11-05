@@ -3,6 +3,7 @@
  * and the Processor is responsible for creating the Tables and Relationships
  */
 
+
 import { fabric } from "fabric";
 import { Canvas, Object } from "fabric/fabric-impl";
 import { IRenderer } from "../../models/IRenderer";
